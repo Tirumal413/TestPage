@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+
+<head>
+    <title>PIE Encryption | Chase Paymentech</title>
+    <meta charset="UTF-8" />
+    <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+    <script>
+        // This function checks whether getkey.js is loaded.
+        function is_pie_key_download_error() {
+            if ((typeof (PIE) == 'undefined') || (typeof (PIE.K) == 'undefined')
+                || (typeof (PIE.L) == 'undefined') || (typeof (PIE.E) == 'undefined')
+                || (typeof (PIE.key_id) == 'undefined') || (typeof (PIE.phase) == 'undefined')) {
+                return true;
+            }
+            return false;
+        }
+
+        // This function checks whether encryption.js is loaded. 
+        function is_pie_encryption_download_error() {
+            if ((typeof ValidatePANChecksum != 'function') || (typeof ProtectPANandCVV != 'function')) {
+                return true;
+            }
+            return false;
+        }
+
+        function doEncryption() {
+            if (is_pie_encryption_download_error()) {
+                alert("Failed to load encryption.js file");
+                return;
+            }
+            if (is_pie_key_download_error()) {
+                alert("Failed to load getkey.js file"); return;
+            }
+            var ccno = document.getElementById("cardNo").value; var cvv = document.getElementById("cvv").value;
+            var embed = document.getElementById("embed").checked;
+            if (embed) {
+                // Check MOD 10 digit, since PIE embedded encryption 
+                // requires that the MOD 10 checksum is valid. 
+                if (!ValidatePANChecksum(ccno)) {
+                    alert("PAN has invalid checksum.");
+                    return false;
+                }
+            }
+            var result = ProtectPANandCVV(ccno, cvv, !embed);
+            if (result != null) {
+                document.getElementById("cryptCard").value = result[0];
+                document.getElementById("cryptCvv").value = result[1];
+                if (result.length > 2) {
+                    document.getElementById("integrityCheckVal").value = result[2];
+                } else {
+                    alert("Error: ProtectPANandCVV call returned null. You may have entered an invalid card number.");
+                }
+                document.getElementById("keyId").value = PIE.key_id; document.getElementById("phase").value = PIE.phase;
+                return false;
+            }
+        }
+
+        function encryptPIE() {
+            cleardefaults()
+            $('#pieForm').hide();
+            var env = $('#env').val();
+            var mid = $('#mid').val();
+            var fmt = $('#fmt').val();
+            if (env && mid && fmt) {
+                var encryptURL = env + "/pie/v1/encryption.js";
+                var midKeyURL = env + '/pie/v1/' + fmt + mid + "/getkey.js";
+                $.getScript(encryptURL, function () { }).fail(function () {
+                    alert("failed to load encryptURL ");
+                });
+                $.getScript(midKeyURL, function () { }).fail(function () {
+                    alert("failed to load MID Key URL");
+                });
+                $('#pieForm').show();
+            }
+            else {
+                alert("Select all details in form to continue..")
+            }
+            return false;
+        }
+
+        function cleardefaults() {
+            $('#cardNo').val('');
+            $('#cryptCard').val('');
+            $('#cryptCvv').val('');
+            $('#phase').val('');
+            $('#keyId').val('');
+            $('#integrityCheckVal').val('');
+        }
+    </script>
+    <!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:Record_x0020_ID msdt:dt="string">50137281</mso:Record_x0020_ID> <mso:Record_x0020_Status msdt:dt="string">Work In Progress</mso:Record_x0020_Status>
+<mso:Record_x0020_Owner msdt:dt="string">49</mso:Record_x0020_Owner> <mso:Record_x0020_Retention_x0020_Type msdt:dt="string">Flat</mso:Record_x0020_Retention_x0020_Type> <mso:display_urn_x003a_schemas-microsoft- com_x003a_office_x003a_office_x0023_Editor msdt:dt="string">Mercer, Tracy</mso:display_urn_x003a_schemas-microsoft- com_x003a_office_x003a_office_x0023_Editor> <mso:Record_x0020_Retention_x0020_Start_x0020_Date msdt:dt="string">2020-10- 01T00:00:00Z</mso:Record_x0020_Retention_x0020_Start_x0020_Date> <mso:Record_x0020_Class_x0020_Code_x0020_Local msdt:dt="string">BIZ010Y</mso:Record_x0020_Class_x0020_Code_x0020_Local> <mso:Record_x0020_Retention_x0020_End_x0020_Date msdt:dt="string">2030-10- 01T00:00:00Z</mso:Record_x0020_Retention_x0020_End_x0020_Date> <mso:Record_x0020_Legal_x0020_Hold msdt:dt="string">0</mso:Record_x0020_Legal_x0020_Hold> <mso:Record_x0020_Class_x0020_Code msdt:dt="string">US: BIZ010Y</mso:Record_x0020_Class_x0020_Code> <mso:Record_x0020_Class_x0020_Code_x0020_Country msdt:dt="string">United States</mso:Record_x0020_Class_x0020_Code_x0020_Country> </mso:CustomDocumentProperties>
+</xml><![endif]-->
+</head>
+
+<body>
+    <h2> Safetech Page PIE Encryption for CARD </h2>
+    <p>Please enter the Merchant ID, format and environment URL for loading PIE encryption.</p>
+    <form id="j_idt6" name="j_idt6" class="merchantForm" onSubmit="return encryptPIE();"
+        enctype="application/x-www-form-urlencoded">
+        <input type="hidden" name="j_idt6" value="j_idt6" />
+        <label for="j_idt6:merchID">Subscriber ID:</label> <input id="mid" type="text" name="j_idt6:merchID"
+            value="100000000043" /> <br><br>
+        <label for="j_idt6:fmt">PIE Format:</label> <select id="fmt" name="j_idt6:fmt" size="1">
+            <option value="64" selected="selected">64</option>
+            <option value="60">60</option>
+            <option value="04">04</option>
+            <option value="00">00</option>
+        </select> <br><br>
+        <label for="j_idt6:env">Environment:</label> <select id="env" name="j_idt6:env" size="1">
+            <option value="https://safetechpageencryptionvar.chasepaymentech.com">VAR</option>
+            <option value="https://safetechpageencryption.chasepaymentech.com">PROD</option>
+        </select> <br><br>
+        <input type="submit" name="j_idt6:j_idt24" value="Load PIE Form" />
+        <button class="greyButton" id="reload" onclick="window.location.href=window.location.href">
+            <span>Reload Page</span>
+        </button>
+    </form>
+
+    <form id="pieForm" style="display:none;" method="post" action="../test.faces" onsubmit="return false;">
+        <div class="demo-card-information">
+            <div class="merchant-details">
+                <h3>
+                    Card Information
+                </h3>
+                <div class="row">
+                    <label id="cardLabel" for="cardNo"> Card Number
+                    </label>
+                    <input id="cardNo" name="cardNo" type="text" /><br><br>
+                </div>
+                <div class="row">
+                    <label id="cvvLabel" for="cvv"> CVV
+                    </label>
+                    <input type="text" id="cvv" name="cvv" /><br><br>
+                </div>
+                <div class="row">
+                    <label id="embedLabel" for="embed">
+                        Embed key
+                    </label>
+                    <input type="checkbox" id="embed" name="embed" value="Y" /><br><br>
+                </div>
+
+                <div class="row">
+                    <div id="leftBut" class="butFloat">
+                        <button class="blueButton" id="encrypt" onclick="return doEncryption()">
+                            <span>Encrypt Card</span> </button>
+                        <button class="greyButton" id="reload" onclick="window.location.href=window.location.href">
+                            <span>Reload Page</span> </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-card-results">
+            <div class="merchant-details">
+                <h3>
+                    Results
+                </h3>
+                <div class="row">
+                    <label id="cryptCardLabel" for="cryptCard">Encrypted Card
+                    </label>
+                    <input id="cryptCard" name="cryptCard" type="text" readonly="readonly" /><br><br>
+                </div>
+                <div class="row">
+                    <label id="cryptCvvLabel" for="cryptCvv"> Encrypted CVV
+                    </label>
+                    <input id="cryptCvv" name="cryptCvv" type="text" readonly="readonly" /><br><br>
+                </div>
+                <div class="row">
+                    <label id="phaseLabel" for="phase"> Phase
+                    </label>
+                    <input id="phase" name="phase" type="text" readonly="readonly" /><br><br>
+                </div>
+
+                <div class="row">
+                    <label id="keyIdLabel" for="keyId"> Key ID
+                    </label>
+                    <input id="keyId" name="keyId" type="text" readonly="readonly" /><br><br>
+                </div>
+                <div class="row">
+                    <label id="integrityCheckValLabel" Integrity Check for="integrityCheckVal">Integrity Check</label>
+
+                    <input id="integrityCheckVal" name="integrityCheckVal" type="text" readonly="readonly" />
+
+                </div>
+            </div>
+        </div>
+    </form>
+</body>
+
+</html>
